@@ -67,3 +67,7 @@ authProviders:
     reference: ./github-auth-provider
   google-auth-provider:
     reference: ./google-auth-provider
+  keycloak-auth-provider:
+    reference: ./keycloak-auth-provider
+  entra-auth-provider:
+    reference: ./entra-auth-provider

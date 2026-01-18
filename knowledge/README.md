@@ -18,7 +18,6 @@ The knowledge tool can run in two modes: server and client, where client can be 
 
 You can find a full gptscript-generated documentation in the [CLI documentation](./docs/cli.md).
 
-
 ### Client - Standalone
 
 ```bash
@@ -50,7 +49,6 @@ knowledge delete-dataset foobar
 
 </details>
 
-
 ## Supported File Types
 
 - `.pdf`
@@ -74,7 +72,6 @@ knowledge delete-dataset foobar
 - `.js`
 - `.py`
 - `.ts`
-
 
 ## OpenAPI / Swagger
 

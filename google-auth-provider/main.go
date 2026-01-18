@@ -13,6 +13,7 @@ import (
 
 	oauth2proxy "github.com/oauth2-proxy/oauth2-proxy/v7"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/obot-platform/tools/auth-providers-common/pkg/env"
 	"github.com/obot-platform/tools/auth-providers-common/pkg/state"
@@ -27,6 +28,27 @@ type Options struct {
 	AuthCookieSecret         string `usage:"Secret used to encrypt cookie" env:"OBOT_AUTH_PROVIDER_COOKIE_SECRET"`
 	AuthEmailDomains         string `usage:"Email domains allowed for authentication" default:"*" env:"OBOT_AUTH_PROVIDER_EMAIL_DOMAINS"`
 	AuthTokenRefreshDuration string `usage:"Duration to refresh auth token after" optional:"true" default:"1h" env:"OBOT_AUTH_PROVIDER_TOKEN_REFRESH_DURATION"`
+}
+
+// sessionManagerAdapter implements state.SessionManager interface
+// This adapter wraps OAuthProxy methods via closures to satisfy the interface
+// without needing to import the OAuthProxy type (which is in package main)
+type sessionManagerAdapter struct {
+	loadSession func(*http.Request) (*sessionsapi.SessionState, error)
+	serveHTTP   func(http.ResponseWriter, *http.Request)
+	cookieOpts  *options.Cookie
+}
+
+func (s *sessionManagerAdapter) LoadCookiedSession(r *http.Request) (*sessionsapi.SessionState, error) {
+	return s.loadSession(r)
+}
+
+func (s *sessionManagerAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.serveHTTP(w, r)
+}
+
+func (s *sessionManagerAdapter) GetCookieOptions() *options.Cookie {
+	return s.cookieOpts
 }
 
 func main() {
@@ -101,6 +123,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create SessionManager adapter for state package
+	// This adapter wraps the OAuthProxy instance to satisfy the state.SessionManager interface
+	sessionManager := &sessionManagerAdapter{
+		loadSession: func(r *http.Request) (*sessionsapi.SessionState, error) {
+			return oauthProxy.LoadCookiedSession(r)
+		},
+		serveHTTP: func(w http.ResponseWriter, r *http.Request) {
+			oauthProxy.ServeHTTP(w, r)
+		},
+		cookieOpts: oauthProxy.CookieOptions,
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "9999"
@@ -110,7 +144,7 @@ func main() {
 	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("http://127.0.0.1:%s", port)))
 	})
-	mux.HandleFunc("/obot-get-state", state.ObotGetState(oauthProxy))
+	mux.HandleFunc("/obot-get-state", state.ObotGetState(sessionManager))
 	mux.HandleFunc("/obot-get-user-info", func(w http.ResponseWriter, r *http.Request) {
 		userInfo, err := profile.FetchGoogleProfile(r.Context(), r.Header.Get("Authorization"), "https://openidconnect.googleapis.com/v1/userinfo")
 		if err != nil {

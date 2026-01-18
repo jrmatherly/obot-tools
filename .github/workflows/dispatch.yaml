@@ -1,7 +1,7 @@
 name: Tag Release of tools
 on:
   repository_dispatch:
-    types: release
+    types: [release]
 
 jobs:
   tag-release:
