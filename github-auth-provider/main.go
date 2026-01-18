@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	oauth2proxy "github.com/oauth2-proxy/oauth2-proxy/v7"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/obot-platform/tools/auth-providers-common/pkg/env"
 	"github.com/obot-platform/tools/auth-providers-common/pkg/state"
@@ -29,6 +30,27 @@ type Options struct {
 	AuthTokenRefreshDuration string  `usage:"Duration to refresh auth token after" optional:"true" default:"1h" env:"OBOT_AUTH_PROVIDER_TOKEN_REFRESH_DURATION"`
 	GitHubOrg                *string `usage:"restrict logins to members of this GitHub organization" optional:"true" env:"OBOT_GITHUB_AUTH_PROVIDER_ORG"`
 	GitHubAllowUsers         *string `usage:"users allowed to log in, even if they do not belong to the specified org and team or collaborators" optional:"true" env:"OBOT_GITHUB_AUTH_PROVIDER_ALLOW_USERS"`
+}
+
+// sessionManagerAdapter implements state.SessionManager interface
+// This adapter wraps OAuthProxy methods via closures to satisfy the interface
+// without needing to import the OAuthProxy type (which is in package main)
+type sessionManagerAdapter struct {
+	loadSession func(*http.Request) (*sessionsapi.SessionState, error)
+	serveHTTP   func(http.ResponseWriter, *http.Request)
+	cookieOpts  *options.Cookie
+}
+
+func (s *sessionManagerAdapter) LoadCookiedSession(r *http.Request) (*sessionsapi.SessionState, error) {
+	return s.loadSession(r)
+}
+
+func (s *sessionManagerAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.serveHTTP(w, r)
+}
+
+func (s *sessionManagerAdapter) GetCookieOptions() *options.Cookie {
+	return s.cookieOpts
 }
 
 func main() {
@@ -112,6 +134,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create SessionManager adapter for state package
+	// This adapter wraps the OAuthProxy instance to satisfy the state.SessionManager interface
+	sessionManager := &sessionManagerAdapter{
+		loadSession: func(r *http.Request) (*sessionsapi.SessionState, error) {
+			return oauthProxy.LoadCookiedSession(r)
+		},
+		serveHTTP: func(w http.ResponseWriter, r *http.Request) {
+			oauthProxy.ServeHTTP(w, r)
+		},
+		cookieOpts: oauthProxy.CookieOptions,
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "9999"
@@ -121,7 +155,7 @@ func main() {
 	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("http://127.0.0.1:%s", port)))
 	})
-	mux.HandleFunc("/obot-get-state", getState(oauthProxy))
+	mux.HandleFunc("/obot-get-state", getState(sessionManager))
 	mux.HandleFunc("/obot-get-user-info", func(w http.ResponseWriter, r *http.Request) {
 		userInfo, err := profile.FetchUserProfile(r.Context(), r.Header.Get("Authorization"))
 		if err != nil {
@@ -142,7 +176,7 @@ func main() {
 	}
 }
 
-func getState(p *oauth2proxy.OAuthProxy) http.HandlerFunc {
+func getState(sm state.SessionManager) http.HandlerFunc {
 	// Cache user IDs for up to 1 hour between requests.
 	// If the cache is full (5000 user IDs), the least recently used entries will be evicted.
 	// If the username or email updates, a new entry will be added to the cache and the latest id,
@@ -168,7 +202,7 @@ func getState(p *oauth2proxy.OAuthProxy) http.HandlerFunc {
 
 		reqObj.Header = sr.Header
 
-		ss, err := state.GetSerializableState(p, reqObj)
+		ss, err := state.GetSerializableState(sm, reqObj)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to get state: %v", err), http.StatusInternalServerError)
 			fmt.Printf("ERROR: github-auth-provider: failed to get state: %v\n", err)
