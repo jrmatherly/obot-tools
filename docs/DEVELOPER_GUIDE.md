@@ -245,7 +245,9 @@ This runs:
 1. Integration tests in `tests/`
 2. Unit tests in `github-auth-provider/`
 3. Unit tests in `google-auth-provider/`
-4. Unit tests in `credential-stores/`
+4. Unit tests in `keycloak-auth-provider/`
+5. Unit tests in `entra-auth-provider/`
+6. Unit tests in `credential-stores/`
 
 ### Run Specific Test Suites
 
