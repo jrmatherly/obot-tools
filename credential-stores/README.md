@@ -48,11 +48,13 @@ resources:
 ## Environment Variables
 
 All helpers:
+
 - `GPTSCRIPT_ENCRYPTION_CONFIG_FILE` - can be used to override the path to the encryption configuration file.
 
 SQLite:
+
 - `GPTSCRIPT_SQLITE_FILE` - can be used to override the path to the SQLite file.
 
 PostgreSQL:
-- `GPTSCRIPT_POSTGRES_DSN` - (required) the DSN (connection string) for the PostgreSQL database.
 
+- `GPTSCRIPT_POSTGRES_DSN` - (required) the DSN (connection string) for the PostgreSQL database.

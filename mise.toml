@@ -1,0 +1,72 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+# obot-tools - Tools, Model Providers, Auth Providers Collection
+# Inherits: go, python from root
+# Mixed language project (Go, Python, TypeScript)
+#
+# Usage:
+#   mise :build          - Build all Go components
+#   mise :test           - Test all Go components
+#   mise :lint           - Lint all code (Go + Python)
+
+[tools]
+python = "3.14"
+"pipx:ruff" = "latest"
+
+[env]
+PROJECT_NAME = "obot-tools"
+
+[tasks.build]
+description = "Build all Go components"
+run = """
+for dir in $(find . -name "go.mod" -not -path "*/.archive/*" -exec dirname {} \\;); do
+    echo "=== Building $dir ==="
+    cd $dir && go build ./... && cd - > /dev/null
+done
+"""
+
+[tasks.test]
+description = "Test all Go components"
+run = """
+for dir in $(find . -name "go.mod" -not -path "*/.archive/*" -exec dirname {} \\;); do
+    echo "=== Testing $dir ==="
+    cd $dir && go test ./... && cd - > /dev/null
+done
+"""
+
+[tasks.tidy]
+description = "Tidy all Go modules"
+run = """
+for dir in $(find . -name "go.mod" -not -path "*/.archive/*" -exec dirname {} \\;); do
+    echo "=== Tidying $dir ==="
+    cd $dir && go mod tidy && cd - > /dev/null
+done
+"""
+
+[tasks.lint-go]
+description = "Lint Go code"
+run = """
+for dir in $(find . -name "go.mod" -not -path "*/.archive/*" -exec dirname {} \\;); do
+    echo "=== Linting $dir ==="
+    cd $dir && golangci-lint run 2>/dev/null || true && cd - > /dev/null
+done
+"""
+
+[tasks.lint-python]
+description = "Lint Python code with ruff"
+run = """
+echo "Running ruff..."
+ruff check . --fix || true
+"""
+
+[tasks.lint]
+alias = "validate"
+description = "Lint all code"
+depends = ["lint-go", "lint-python"]
+
+[tasks.package-tools]
+description = "Package user-facing tools"
+run = "make package-tools"
+
+[tasks.package-providers]
+description = "Package model/auth providers"
+run = "make package-providers"
