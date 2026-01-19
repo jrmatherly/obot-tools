@@ -13,7 +13,7 @@ This repository contains a comprehensive suite of components that extend the [Ob
 
 - **🛠️ Core Tools**: Memory, knowledge base (RAG), tasks, file operations, and more
 - **🤖 Model Providers**: Integrations with OpenAI, Anthropic, Ollama, Groq, xAI, DeepSeek, Voyage, and more
-- **🔐 Auth Providers**: OAuth2-based authentication for GitHub and Google
+- **🔐 Auth Providers**: OAuth2-based authentication for GitHub, Google, Keycloak, and Microsoft Entra ID
 - **🔑 Credential Management**: Secure credential storage with SQLite and PostgreSQL backends
 
 ## Quick Start
@@ -95,6 +95,8 @@ OAuth2-based user authentication:
 | ---------- | ------------- |
 | [github-auth-provider](github-auth-provider/) | GitHub OAuth2 with org/team/repo validation |
 | [google-auth-provider](google-auth-provider/) | Google OAuth2 (reference implementation) |
+| [keycloak-auth-provider](keycloak-auth-provider/) | Keycloak/RHSSO OAuth2 with realm/group validation |
+| [entra-auth-provider](entra-auth-provider/) | Microsoft Entra ID (Azure AD) with group validation |
 
 #### Credential Management
 

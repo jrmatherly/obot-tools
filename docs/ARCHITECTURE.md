@@ -128,8 +128,10 @@ Auth Provider Component
 
 **Providers**:
 
-- **GitHub** (`github-auth-provider/`) - GitHub OAuth2
+- **GitHub** (`github-auth-provider/`) - GitHub OAuth2 with org/team/repo validation
 - **Google** (`google-auth-provider/`) - Google OAuth2 (reference implementation)
+- **Keycloak** (`keycloak-auth-provider/`) - Keycloak/RHSSO OAuth2 with realm/group validation
+- **Entra ID** (`entra-auth-provider/`) - Microsoft Entra ID (Azure AD) with group validation
 
 **Common OAuth2 Endpoints**:
 
@@ -324,9 +326,9 @@ Stage 3: providers - Build all providers (make package-providers)
 **GitHub Actions Workflows**:
 
 1. **test.yaml** (Pull Requests):
-   - Go tests with Go 1.23
+   - Go tests with Go 1.25
    - Build verification (`make build`, `make test`)
-   - Multi-platform Docker build (amd64, arm64)
+   - Docker build verification (amd64)
 
 2. **build-tools.yaml**:
    - Package tools for distribution
@@ -446,7 +448,7 @@ User (Browser)
     ├─ Store redirect URL
     │
     ▼
-Redirect to OAuth Provider (GitHub/Google)
+Redirect to OAuth Provider (GitHub/Google/Keycloak/Entra)
     │
     ▼
 User Authorizes

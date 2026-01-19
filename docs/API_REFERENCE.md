@@ -11,6 +11,8 @@
 - [Authentication Providers](#authentication-providers)
   - [GitHub Auth Provider](#github-auth-provider)
   - [Google Auth Provider](#google-auth-provider)
+  - [Keycloak Auth Provider](#keycloak-auth-provider)
+  - [Entra ID Auth Provider](#entra-id-auth-provider)
 - [Core Tools](#core-tools)
   - [Memory Tool](#memory-tool)
   - [Knowledge Tool](#knowledge-tool)
@@ -529,6 +531,89 @@ Users must satisfy:
 
 1. Email domain matches one of `OBOT_AUTH_PROVIDER_EMAIL_DOMAINS`
 2. If `OBOT_GOOGLE_AUTH_PROVIDER_ALLOW_USERS` is set, email must be in list
+
+#### Profile API
+
+**Package**: `pkg/profile`
+
+**Function**: `GetProfile(accessToken string) (*Profile, error)`
+
+---
+
+### Keycloak Auth Provider
+
+**Directory**: `keycloak-auth-provider/`
+**Language**: Go
+**OAuth Provider**: Keycloak / Red Hat SSO (OIDC)
+
+#### Environment Variables
+
+**Required**:
+
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_CLIENT_ID` - Keycloak client ID
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_CLIENT_SECRET` - Keycloak client secret
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_URL` - Keycloak base URL (e.g., `https://keycloak.example.com`)
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_REALM` - Keycloak realm name
+- `OBOT_AUTH_PROVIDER_COOKIE_SECRET` - Cookie encryption secret (32+ bytes)
+- `OBOT_AUTH_PROVIDER_EMAIL_DOMAINS` - Comma-separated allowed email domains (use `*` for all)
+
+**Optional**:
+
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_ALLOWED_GROUPS` - Comma-separated allowed Keycloak groups
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_ALLOWED_ROLES` - Comma-separated allowed roles (format: `role` or `client-id:role`)
+- `OBOT_KEYCLOAK_AUTH_PROVIDER_GROUP_CACHE_TTL` - Group cache duration (default: `1h`)
+- `OBOT_AUTH_PROVIDER_POSTGRES_CONNECTION_DSN` - PostgreSQL for session storage
+- `OBOT_AUTH_PROVIDER_TOKEN_REFRESH_DURATION` - Token refresh interval (default: `1h`)
+
+#### User Validation
+
+Users must satisfy **all** configured validations:
+
+1. Email domain matches one of `OBOT_AUTH_PROVIDER_EMAIL_DOMAINS`
+2. If `OBOT_KEYCLOAK_AUTH_PROVIDER_ALLOWED_GROUPS` is set, user must be member of at least one group
+3. If `OBOT_KEYCLOAK_AUTH_PROVIDER_ALLOWED_ROLES` is set, user must have at least one role
+
+#### Profile API
+
+**Package**: `pkg/profile`
+
+**Function**: `GetProfile(accessToken string) (*Profile, error)`
+
+---
+
+### Entra ID Auth Provider
+
+**Directory**: `entra-auth-provider/`
+**Language**: Go
+**OAuth Provider**: Microsoft Entra ID (Azure AD)
+
+#### Environment Variables
+
+**Required**:
+
+- `OBOT_ENTRA_AUTH_PROVIDER_CLIENT_ID` - Azure App Registration client ID
+- `OBOT_ENTRA_AUTH_PROVIDER_CLIENT_SECRET` - Azure App Registration client secret
+- `OBOT_ENTRA_AUTH_PROVIDER_TENANT_ID` - Azure tenant ID (or `common`/`organizations` for multi-tenant)
+- `OBOT_AUTH_PROVIDER_COOKIE_SECRET` - Cookie encryption secret (32+ bytes)
+- `OBOT_AUTH_PROVIDER_EMAIL_DOMAINS` - Comma-separated allowed email domains (use `*` for all)
+
+**Optional**:
+
+- `OBOT_ENTRA_AUTH_PROVIDER_ALLOWED_GROUPS` - Comma-separated Azure AD group IDs
+- `OBOT_ENTRA_AUTH_PROVIDER_ALLOWED_TENANTS` - Comma-separated tenant IDs (required for multi-tenant)
+- `OBOT_ENTRA_AUTH_PROVIDER_USE_WORKLOAD_IDENTITY` - Enable Azure Workload Identity (`true`/`false`)
+- `OBOT_ENTRA_AUTH_PROVIDER_GROUP_CACHE_TTL` - Group cache duration (default: `1h`)
+- `OBOT_ENTRA_AUTH_PROVIDER_ICON_CACHE_TTL` - Profile picture cache duration (default: `24h`)
+- `OBOT_AUTH_PROVIDER_POSTGRES_CONNECTION_DSN` - PostgreSQL for session storage
+- `OBOT_AUTH_PROVIDER_TOKEN_REFRESH_DURATION` - Token refresh interval (default: `1h`)
+
+#### User Validation
+
+Users must satisfy **all** configured validations:
+
+1. Email domain matches one of `OBOT_AUTH_PROVIDER_EMAIL_DOMAINS`
+2. If `OBOT_ENTRA_AUTH_PROVIDER_ALLOWED_GROUPS` is set, user must be member of at least one group
+3. If `OBOT_ENTRA_AUTH_PROVIDER_ALLOWED_TENANTS` is set (multi-tenant), user's tenant must be in list
 
 #### Profile API
 
