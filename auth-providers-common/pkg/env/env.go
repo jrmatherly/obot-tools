@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -49,6 +50,12 @@ func LoadEnvForStruct[T any](s *T) error {
 		switch field.Type.Kind() {
 		case reflect.String:
 			fieldValue.SetString(value)
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			intValue, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid integer value '%s' for field %s: %w", value, field.Name, err)
+			}
+			fieldValue.SetInt(intValue)
 		case reflect.Slice:
 			if field.Type.Elem().Kind() == reflect.String {
 				fieldValue.Set(reflect.ValueOf(strings.Split(value, ",")))
