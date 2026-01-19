@@ -233,7 +233,7 @@ func main() {
 
 	// Set additional cookie security flags
 	oauthProxyOpts.Cookie.HTTPOnly = true
-	oauthProxyOpts.Cookie.SameSite = "Lax" // Prevents CSRF while allowing OAuth redirects
+	oauthProxyOpts.Cookie.SameSite = "lax" // Prevents CSRF while allowing OAuth redirects (must be lowercase)
 
 	// Set cookie domain and path explicitly
 	oauthProxyOpts.Cookie.Domains = []string{parsedURL.Hostname()}
