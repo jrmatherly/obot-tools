@@ -56,6 +56,12 @@ func LoadEnvForStruct[T any](s *T) error {
 				return fmt.Errorf("invalid integer value '%s' for field %s: %w", value, field.Name, err)
 			}
 			fieldValue.SetInt(intValue)
+		case reflect.Bool:
+			boolValue, err := strconv.ParseBool(value)
+			if err != nil {
+				return fmt.Errorf("invalid boolean value '%s' for field %s: %w", value, field.Name, err)
+			}
+			fieldValue.SetBool(boolValue)
 		case reflect.Slice:
 			if field.Type.Elem().Kind() == reflect.String {
 				fieldValue.Set(reflect.ValueOf(strings.Split(value, ",")))
