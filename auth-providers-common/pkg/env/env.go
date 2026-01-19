@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func LoadEnvForStruct[T any](s *T) error {
@@ -44,6 +45,16 @@ func LoadEnvForStruct[T any](s *T) error {
 		fieldValue := v.Field(i)
 		if !fieldValue.CanSet() {
 			return fmt.Errorf("cannot set value for field %s", field.Name)
+		}
+
+		// Handle time.Duration as a special case (it's a named type, not just int64)
+		if field.Type == reflect.TypeOf(time.Duration(0)) {
+			duration, err := time.ParseDuration(value)
+			if err != nil {
+				return fmt.Errorf("invalid duration value '%s' for field %s: %w", value, field.Name, err)
+			}
+			fieldValue.SetInt(int64(duration))
+			continue
 		}
 
 		// We can add more types as needed
