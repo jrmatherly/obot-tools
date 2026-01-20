@@ -13,6 +13,7 @@ import (
 	"time"
 
 	openai "github.com/gptscript-ai/chat-completion-client"
+	"github.com/obot-platform/tools/pkg/metrics"
 )
 
 func Run(obotHost, port string) error {
@@ -32,9 +33,12 @@ func Run(obotHost, port string) error {
 		Director: s.proxy("/api/llm-proxy"),
 	})
 
+	// Wrap mux with metrics middleware
+	handler := metricsMiddleware(mux)
+
 	httpServer := &http.Server{
 		Addr:    "127.0.0.1:" + port,
-		Handler: mux,
+		Handler: handler,
 	}
 
 	if err := httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -134,4 +138,84 @@ func getAPIKey(req *http.Request) string {
 
 type modelList struct {
 	Items []map[string]any `json:"items"`
+}
+
+// metricsMiddleware wraps HTTP handlers to track Prometheus metrics
+func metricsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip metrics for health check endpoint
+		if r.URL.Path == "/" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		startTime := time.Now()
+		model := extractModel(r)
+
+		// Track active requests
+		metrics.ModelProviderActiveRequests.WithLabelValues("obot", model).Inc()
+		defer metrics.ModelProviderActiveRequests.WithLabelValues("obot", model).Dec()
+
+		// Create response writer wrapper to capture status code
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		// Serve the request
+		next.ServeHTTP(rw, r)
+
+		duration := time.Since(startTime)
+
+		// Record metrics based on status code
+		if rw.statusCode >= 200 && rw.statusCode < 300 {
+			metrics.RecordRequestSuccess("obot", model, duration)
+		} else if rw.statusCode >= 400 && rw.statusCode < 500 {
+			metrics.RecordRequestFailure("obot", model, duration)
+			metrics.RecordError("obot", model, "client_error")
+		} else if rw.statusCode >= 500 {
+			metrics.RecordRequestError("obot", model, duration)
+			metrics.RecordError("obot", model, "server_error")
+		}
+	})
+}
+
+// responseWriter wraps http.ResponseWriter to capture status code
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(statusCode int) {
+	rw.statusCode = statusCode
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+// extractModel attempts to extract the model name from the request
+func extractModel(r *http.Request) string {
+	// Try to extract from query parameter
+	if model := r.URL.Query().Get("model"); model != "" {
+		return model
+	}
+
+	// For POST requests, try to extract from request body
+	if r.Method == http.MethodPost {
+		// Read the body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			return "unknown"
+		}
+		defer r.Body.Close()
+
+		// Restore the body for downstream handlers
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
+
+		// Try to parse as JSON and extract model
+		var requestData map[string]any
+		if err := json.Unmarshal(body, &requestData); err == nil {
+			if model, ok := requestData["model"].(string); ok && model != "" {
+				return model
+			}
+		}
+	}
+
+	// Default to unknown if we can't determine the model
+	return "unknown"
 }
