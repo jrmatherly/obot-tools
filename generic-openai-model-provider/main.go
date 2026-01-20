@@ -32,6 +32,13 @@ func main() {
 		}
 	}
 
+	// Circuit breaker configuration (opt-in for backward compatibility)
+	enableCircuitBreaker := os.Getenv("OBOT_GENERIC_OPENAI_MODEL_PROVIDER_CIRCUIT_BREAKER_ENABLED") == "true"
+	var circuitBreakerConfig *proxy.CircuitBreakerConfig
+	if enableCircuitBreaker {
+		circuitBreakerConfig = proxy.LoadCircuitBreakerConfigFromEnv("Generic OpenAI", "OBOT_GENERIC_OPENAI_MODEL_PROVIDER_")
+	}
+
 	cfg := &proxy.Config{
 		APIKey:               os.Getenv("OBOT_GENERIC_OPENAI_MODEL_PROVIDER_API_KEY"), // optional, as e.g. Ollama doesn't require an API key
 		PersonalAPIKeyHeader: "X-Obot-OBOT_GENERIC_OPENAI_MODEL_PROVIDER_API_KEY",
@@ -39,6 +46,8 @@ func main() {
 		BaseURL:              u.String(),
 		RewriteModelsFn:      proxy.RewriteAllModelsWithUsage("llm"),
 		Name:                 "Generic OpenAI",
+		EnableCircuitBreaker:  enableCircuitBreaker,
+		CircuitBreakerConfig:  circuitBreakerConfig,
 	}
 
 	if err := cfg.Validate("/tools/generic-openai-model-provider/validate"); err != nil {

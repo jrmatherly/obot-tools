@@ -39,6 +39,13 @@ func main() {
 		}
 	}
 
+	// Circuit breaker configuration (opt-in for backward compatibility)
+	enableCircuitBreaker := os.Getenv("OBOT_VLLM_MODEL_PROVIDER_CIRCUIT_BREAKER_ENABLED") == "true"
+	var circuitBreakerConfig *proxy.CircuitBreakerConfig
+	if enableCircuitBreaker {
+		circuitBreakerConfig = proxy.LoadCircuitBreakerConfigFromEnv("vLLM", "OBOT_VLLM_MODEL_PROVIDER_")
+	}
+
 	cfg := &proxy.Config{
 		APIKey:                apiKey,
 		PersonalAPIKeyHeader:  "X-Obot-OBOT_VLLM_MODEL_PROVIDER_API_KEY",
@@ -47,6 +54,8 @@ func main() {
 		BaseURL:               strings.TrimSuffix(u.String(), "/v1") + "/v1", // make sure we have /v1 for vLLM
 		RewriteModelsFn:       proxy.RewriteAllModelsWithUsage("llm"),
 		Name:                  "vLLM",
+		EnableCircuitBreaker:  enableCircuitBreaker,
+		CircuitBreakerConfig:  circuitBreakerConfig,
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "validate" {

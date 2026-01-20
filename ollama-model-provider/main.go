@@ -38,12 +38,21 @@ func main() {
 		u.Path = "/v1"
 	}
 
+	// Circuit breaker configuration (opt-in for backward compatibility)
+	enableCircuitBreaker := os.Getenv("OBOT_OLLAMA_MODEL_PROVIDER_CIRCUIT_BREAKER_ENABLED") == "true"
+	var circuitBreakerConfig *proxy.CircuitBreakerConfig
+	if enableCircuitBreaker {
+		circuitBreakerConfig = proxy.LoadCircuitBreakerConfigFromEnv("Ollama", "OBOT_OLLAMA_MODEL_PROVIDER_")
+	}
+
 	cfg := &proxy.Config{
 		PersonalBaseURLHeader: "X-Obot-OLLAMA_MODEL_PROVIDER_HOST",
 		ListenPort:            os.Getenv("PORT"),
 		BaseURL:               u.String(),
 		RewriteModelsFn:       proxy.RewriteAllModelsWithUsage("llm"),
 		Name:                  "Ollama",
+		EnableCircuitBreaker:  enableCircuitBreaker,
+		CircuitBreakerConfig:  circuitBreakerConfig,
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "validate" {
