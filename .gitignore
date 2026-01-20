@@ -463,3 +463,13 @@ Pipfile*
 **/*.egg-info
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,terraform,go,python,windows,ansible,virtualenv,node
+
+# Compiled model provider binaries (executables without extension in their dirs)
+anthropic-model-provider-go/anthropic-model-provider
+deepseek-model-provider/deepseek-model-provider
+generic-openai-model-provider/generic-openai-model-provider
+groq-model-provider/groq-model-provider
+ollama-model-provider/ollama-model-provider
+openai-model-provider/openai-model-provider
+vllm-model-provider/vllm-model-provider
+xai-model-provider/xai-model-provider
