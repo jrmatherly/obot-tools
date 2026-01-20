@@ -28,6 +28,13 @@ func main() {
 		fmt.Println("OBOT_XAI_MODEL_PROVIDER_API_KEY is not set, credential must be provided on a per-request basis")
 	}
 
+	// Circuit breaker configuration (opt-in for backward compatibility)
+	enableCircuitBreaker := os.Getenv("OBOT_XAI_MODEL_PROVIDER_CIRCUIT_BREAKER_ENABLED") == "true"
+	var circuitBreakerConfig *proxy.CircuitBreakerConfig
+	if enableCircuitBreaker {
+		circuitBreakerConfig = proxy.LoadCircuitBreakerConfigFromEnv("xAI", "OBOT_XAI_MODEL_PROVIDER_")
+	}
+
 	cfg := &proxy.Config{
 		APIKey:               apiKey,
 		PersonalAPIKeyHeader: "X-Obot-OBOT_XAI_MODEL_PROVIDER_API_KEY",
@@ -35,6 +42,8 @@ func main() {
 		BaseURL:              "https://api.x.ai/v1",
 		RewriteModelsFn:      RewriteGrokModels,
 		Name:                 "xAI",
+		EnableCircuitBreaker: enableCircuitBreaker,
+		CircuitBreakerConfig: circuitBreakerConfig,
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "validate" {
