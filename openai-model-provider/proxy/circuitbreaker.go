@@ -160,7 +160,18 @@ func (cbt *CircuitBreakerTransport) RoundTrip(req *http.Request) (*http.Response
 	start := time.Now()
 
 	result, err := cbt.cb.Execute(func() (interface{}, error) {
-		return cbt.transport.RoundTrip(req)
+		resp, err := cbt.transport.RoundTrip(req)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check HTTP status code to determine if this should count as a failure
+		// This must happen inside Execute so gobreaker counts it as a failure
+		if isFailureStatusCode(resp.StatusCode) {
+			return resp, fmt.Errorf("HTTP %d from provider %s", resp.StatusCode, cbt.config.Provider)
+		}
+
+		return resp, nil
 	})
 
 	duration := time.Since(start).Seconds()
@@ -173,7 +184,7 @@ func (cbt *CircuitBreakerTransport) RoundTrip(req *http.Request) (*http.Response
 			return nil, fmt.Errorf("circuit breaker open for provider %s: too many failures", cbt.config.Provider)
 		}
 
-		// Check if it's a retryable HTTP error
+		// Record failure and return error
 		CircuitBreakerRequests.WithLabelValues(cbt.config.Provider, "failure").Inc()
 		return nil, err
 	}
@@ -182,13 +193,6 @@ func (cbt *CircuitBreakerTransport) RoundTrip(req *http.Request) (*http.Response
 	if !ok {
 		CircuitBreakerRequests.WithLabelValues(cbt.config.Provider, "failure").Inc()
 		return nil, fmt.Errorf("unexpected response type from circuit breaker")
-	}
-
-	// Check HTTP status code to determine if this should count as a failure
-	if isFailureStatusCode(resp.StatusCode) {
-		CircuitBreakerRequests.WithLabelValues(cbt.config.Provider, "failure").Inc()
-		// Return an error so circuit breaker counts this as a failure
-		return resp, fmt.Errorf("HTTP %d from provider %s", resp.StatusCode, cbt.config.Provider)
 	}
 
 	CircuitBreakerRequests.WithLabelValues(cbt.config.Provider, "success").Inc()
