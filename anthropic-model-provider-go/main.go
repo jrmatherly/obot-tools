@@ -13,12 +13,21 @@ import (
 func main() {
 	isValidate := len(os.Args) > 1 && os.Args[1] == "validate"
 
+	// Circuit breaker configuration (opt-in for backward compatibility)
+	enableCircuitBreaker := os.Getenv("OBOT_ANTHROPIC_MODEL_PROVIDER_CIRCUIT_BREAKER_ENABLED") == "true"
+	var circuitBreakerConfig *proxy.CircuitBreakerConfig
+	if enableCircuitBreaker {
+		circuitBreakerConfig = proxy.LoadCircuitBreakerConfigFromEnv("Anthropic", "OBOT_ANTHROPIC_MODEL_PROVIDER_")
+	}
+
 	cfg := &proxy.Config{
 		APIKey:               os.Getenv("OBOT_ANTHROPIC_MODEL_PROVIDER_API_KEY"),
 		PersonalAPIKeyHeader: "X-Obot-OBOT_ANTHROPIC_MODEL_PROVIDER_API_KEY",
 		ListenPort:           os.Getenv("PORT"),
 		BaseURL:              "https://api.anthropic.com/v1/",
 		Name:                 "Anthropic",
+		EnableCircuitBreaker: enableCircuitBreaker,
+		CircuitBreakerConfig: circuitBreakerConfig,
 	}
 
 	prox := aproxy.NewServer(cfg)
