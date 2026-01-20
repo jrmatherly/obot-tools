@@ -110,6 +110,20 @@ func Run(cfg *Config) error {
 		cfg.CustomPathHandleFuncs = make(map[string]http.HandlerFunc)
 	}
 
+	// Create transport with optional circuit breaker wrapping
+	var transport http.RoundTripper
+	if cfg.EnableCircuitBreaker {
+		cbConfig := cfg.CircuitBreakerConfig
+		if cbConfig == nil {
+			cbConfig = DefaultCircuitBreakerConfig(cfg.Name)
+		}
+		transport = NewCircuitBreakerTransport(http.DefaultTransport, cbConfig)
+		fmt.Printf("[model-provider: %s] Circuit breaker enabled (threshold=%d, timeout=%s, interval=%s)\n",
+			cfg.Name, cbConfig.Threshold, cbConfig.Timeout, cbConfig.Interval)
+	} else {
+		transport = http.DefaultTransport
+	}
+
 	// Register default handlers only if they are not already registered
 	if handler := cfg.CustomPathHandleFuncs["/{$}"]; handler == nil {
 		cfg.CustomPathHandleFuncs["/{$}"] = s.healthz
@@ -118,11 +132,13 @@ func Run(cfg *Config) error {
 		cfg.CustomPathHandleFuncs["/v1/models"] = (&httputil.ReverseProxy{
 			Director:       s.proxyDirector,
 			ModifyResponse: cfg.RewriteModelsFn,
+			Transport:      transport,
 		}).ServeHTTP
 	}
 	if handler := cfg.CustomPathHandleFuncs["/v1/"]; handler == nil {
 		cfg.CustomPathHandleFuncs["/v1/"] = (&httputil.ReverseProxy{
-			Director: s.proxyDirector,
+			Director:  s.proxyDirector,
+			Transport: transport,
 		}).ServeHTTP
 	}
 
