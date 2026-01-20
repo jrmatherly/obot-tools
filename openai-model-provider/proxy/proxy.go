@@ -48,6 +48,15 @@ type Config struct {
 
 	// CustomPathHandleFuncs is a map of paths to custom handle funcs to completely override the default reverse proxy behavior for a given path
 	CustomPathHandleFuncs map[string]http.HandlerFunc
+
+	// EnableCircuitBreaker enables circuit breaker protection for the HTTP transport
+	// When enabled, the proxy will wrap the ReverseProxy transport with circuit breaker logic
+	// Default: false (opt-in for backward compatibility)
+	EnableCircuitBreaker bool
+
+	// CircuitBreakerConfig holds the circuit breaker configuration
+	// If nil when EnableCircuitBreaker is true, DefaultCircuitBreakerConfig will be used
+	CircuitBreakerConfig *CircuitBreakerConfig
 }
 
 type server struct {
