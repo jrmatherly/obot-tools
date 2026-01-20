@@ -21,6 +21,13 @@ func main() {
 		port = "8000"
 	}
 
+	// Circuit breaker configuration (opt-in for backward compatibility)
+	enableCircuitBreaker := os.Getenv("OBOT_OPENAI_MODEL_PROVIDER_CIRCUIT_BREAKER_ENABLED") == "true"
+	var circuitBreakerConfig *proxy.CircuitBreakerConfig
+	if enableCircuitBreaker {
+		circuitBreakerConfig = proxy.LoadCircuitBreakerConfigFromEnv("OpenAI", "OBOT_OPENAI_MODEL_PROVIDER_")
+	}
+
 	cfg := &proxy.Config{
 		APIKey:                apiKey,
 		PersonalAPIKeyHeader:  "X-Obot-OBOT_OPENAI_MODEL_PROVIDER_API_KEY",
@@ -29,6 +36,8 @@ func main() {
 		RewriteModelsFn:       proxy.DefaultRewriteModelsResponse,
 		Name:                  "OpenAI",
 		CustomPathHandleFuncs: map[string]http.HandlerFunc{},
+		EnableCircuitBreaker:  enableCircuitBreaker,
+		CircuitBreakerConfig:  circuitBreakerConfig,
 	}
 
 	openaiProxy := openaiproxy.NewServer(cfg)
