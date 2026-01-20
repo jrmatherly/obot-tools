@@ -473,3 +473,6 @@ ollama-model-provider/ollama-model-provider
 openai-model-provider/openai-model-provider
 vllm-model-provider/vllm-model-provider
 xai-model-provider/xai-model-provider
+
+# Auto Claude data directory
+.auto-claude/
